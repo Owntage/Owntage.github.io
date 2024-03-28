@@ -838,6 +838,8 @@ var tempI64;
 function getCanvasWidth() { return document.getElementById("canvas").scrollWidth * window.devicePixelRatio; }
 function getCanvasHeight() { return document.getElementById("canvas").scrollHeight * window.devicePixelRatio; }
 function getDPI() { return window.devicePixelRatio; }
+function upload(accept_types,callback,callback_data) { globalThis["open_file"] = function(e) { const file_reader = new FileReader(); file_reader.onload = (event) => { const uint8Arr = new Uint8Array(event.target.result); const num_bytes = uint8Arr.length * uint8Arr.BYTES_PER_ELEMENT; const data_ptr = Module["_malloc"](num_bytes); const data_on_heap = new Uint8Array(Module["HEAPU8"].buffer, data_ptr, num_bytes); data_on_heap.set(uint8Arr); Module["ccall"]('upload_file_return', 'number', ['string', 'string', 'number', 'number', 'number', 'number'], [event.target.filename, event.target.mime_type, data_on_heap.byteOffset, uint8Arr.length, callback, callback_data]); Module["_free"](data_ptr); }; file_reader.filename = e.target.files[0].name; file_reader.mime_type = e.target.files[0].type; file_reader.readAsArrayBuffer(e.target.files[0]); }; var file_selector = document.createElement('input'); file_selector.setAttribute('type', 'file'); file_selector.setAttribute('onchange', 'globalThis["open_file"](event)'); file_selector.setAttribute('accept', UTF8ToString(accept_types)); file_selector.click(); }
+function download(filename,mime_type,buffer,buffer_size) { var a = document.createElement('a'); a.download = UTF8ToString(filename); a.href = URL.createObjectURL(new Blob([new Uint8Array(Module["HEAPU8"].buffer, buffer, buffer_size)], {type: UTF8ToString(mime_type)})); a.click(); }
 function getDPI_js() { return window.devicePixelRatio; }
 
 
@@ -8801,6 +8803,81 @@ function getDPI_js() { return window.devicePixelRatio; }
 
 
 
+  var getCFunc = (ident) => {
+      var func = Module['_' + ident]; // closure exported function
+      return func;
+    };
+  
+  
+  
+  var stringToUTF8OnStack = (str) => {
+      var size = lengthBytesUTF8(str) + 1;
+      var ret = stackAlloc(size);
+      stringToUTF8(str, ret, size);
+      return ret;
+    };
+  
+  
+  
+  
+  
+    /**
+     * @param {string|null=} returnType
+     * @param {Array=} argTypes
+     * @param {Arguments|Array=} args
+     * @param {Object=} opts
+     */
+  var ccall = (ident, returnType, argTypes, args, opts) => {
+      // For fast lookup of conversion functions
+      var toC = {
+        'string': (str) => {
+          var ret = 0;
+          if (str !== null && str !== undefined && str !== 0) { // null string
+            // at most 4 bytes per UTF-8 code point, +1 for the trailing '\0'
+            ret = stringToUTF8OnStack(str);
+          }
+          return ret;
+        },
+        'array': (arr) => {
+          var ret = stackAlloc(arr.length);
+          writeArrayToMemory(arr, ret);
+          return ret;
+        }
+      };
+  
+      function convertReturnValue(ret) {
+        if (returnType === 'string') {
+          
+          return UTF8ToString(ret);
+        }
+        if (returnType === 'boolean') return Boolean(ret);
+        return ret;
+      }
+  
+      var func = getCFunc(ident);
+      var cArgs = [];
+      var stack = 0;
+      if (args) {
+        for (var i = 0; i < args.length; i++) {
+          var converter = toC[argTypes[i]];
+          if (converter) {
+            if (stack === 0) stack = stackSave();
+            cArgs[i] = converter(args[i]);
+          } else {
+            cArgs[i] = args[i];
+          }
+        }
+      }
+      var ret = func(...cArgs);
+      function onDone(ret) {
+        if (stack !== 0) stackRestore(stack);
+        return convertReturnValue(ret);
+      }
+  
+      ret = onDone(ret);
+      return ret;
+    };
+
 
 
   var FS_unlink = (path) => FS.unlink(path);
@@ -8905,6 +8982,8 @@ var wasmImports = {
   _tzset_js: __tzset_js,
   /** @export */
   abort: _abort,
+  /** @export */
+  download: download,
   /** @export */
   emscripten_date_now: _emscripten_date_now,
   /** @export */
@@ -9190,13 +9269,16 @@ var wasmImports = {
   /** @export */
   glfwWindowHint: _glfwWindowHint,
   /** @export */
-  strftime_l: _strftime_l
+  strftime_l: _strftime_l,
+  /** @export */
+  upload: upload
 };
 var wasmExports = createWasm();
 var ___wasm_call_ctors = () => (___wasm_call_ctors = wasmExports['__wasm_call_ctors'])();
-var _malloc = (a0) => (_malloc = wasmExports['malloc'])(a0);
-var _free = (a0) => (_free = wasmExports['free'])(a0);
+var _malloc = Module['_malloc'] = (a0) => (_malloc = Module['_malloc'] = wasmExports['malloc'])(a0);
+var _free = Module['_free'] = (a0) => (_free = Module['_free'] = wasmExports['free'])(a0);
 var _main = Module['_main'] = (a0, a1) => (_main = Module['_main'] = wasmExports['main'])(a0, a1);
+var _upload_file_return = Module['_upload_file_return'] = (a0, a1, a2, a3, a4, a5) => (_upload_file_return = Module['_upload_file_return'] = wasmExports['upload_file_return'])(a0, a1, a2, a3, a4, a5);
 var setTempRet0 = (a0) => (setTempRet0 = wasmExports['setTempRet0'])(a0);
 var stackSave = () => (stackSave = wasmExports['stackSave'])();
 var stackRestore = (a0) => (stackRestore = wasmExports['stackRestore'])(a0);
@@ -9207,8 +9289,8 @@ var dynCall_viijii = Module['dynCall_viijii'] = (a0, a1, a2, a3, a4, a5, a6) => 
 var dynCall_iiiiij = Module['dynCall_iiiiij'] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_iiiiij = Module['dynCall_iiiiij'] = wasmExports['dynCall_iiiiij'])(a0, a1, a2, a3, a4, a5, a6);
 var dynCall_iiiiijj = Module['dynCall_iiiiijj'] = (a0, a1, a2, a3, a4, a5, a6, a7, a8) => (dynCall_iiiiijj = Module['dynCall_iiiiijj'] = wasmExports['dynCall_iiiiijj'])(a0, a1, a2, a3, a4, a5, a6, a7, a8);
 var dynCall_iiiiiijj = Module['dynCall_iiiiiijj'] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9) => (dynCall_iiiiiijj = Module['dynCall_iiiiiijj'] = wasmExports['dynCall_iiiiiijj'])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
-var ___start_em_js = Module['___start_em_js'] = 166636;
-var ___stop_em_js = Module['___stop_em_js'] = 166901;
+var ___start_em_js = Module['___start_em_js'] = 167196;
+var ___stop_em_js = Module['___stop_em_js'] = 168909;
 
 // include: postamble.js
 // === Auto-generated postamble setup entry stuff ===
@@ -9218,6 +9300,7 @@ Module['removeRunDependency'] = removeRunDependency;
 Module['FS_createPath'] = FS.createPath;
 Module['FS_createLazyFile'] = FS.createLazyFile;
 Module['FS_createDevice'] = FS.createDevice;
+Module['ccall'] = ccall;
 Module['FS_createPreloadedFile'] = FS.createPreloadedFile;
 Module['FS_createDataFile'] = FS.createDataFile;
 Module['FS_unlink'] = FS.unlink;
