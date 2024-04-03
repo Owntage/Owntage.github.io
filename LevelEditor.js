@@ -841,6 +841,9 @@ function getDPI() { return window.devicePixelRatio; }
 function upload(accept_types,callback,callback_data) { globalThis["open_file"] = function(e) { const file_reader = new FileReader(); file_reader.onload = (event) => { const uint8Arr = new Uint8Array(event.target.result); const num_bytes = uint8Arr.length * uint8Arr.BYTES_PER_ELEMENT; const data_ptr = Module["_malloc"](num_bytes); const data_on_heap = new Uint8Array(Module["HEAPU8"].buffer, data_ptr, num_bytes); data_on_heap.set(uint8Arr); Module["ccall"]('upload_file_return', 'number', ['string', 'string', 'number', 'number', 'number', 'number'], [event.target.filename, event.target.mime_type, data_on_heap.byteOffset, uint8Arr.length, callback, callback_data]); Module["_free"](data_ptr); }; file_reader.filename = e.target.files[0].name; file_reader.mime_type = e.target.files[0].type; file_reader.readAsArrayBuffer(e.target.files[0]); }; var file_selector = document.createElement('input'); file_selector.setAttribute('type', 'file'); file_selector.setAttribute('onchange', 'globalThis["open_file"](event)'); file_selector.setAttribute('accept', UTF8ToString(accept_types)); file_selector.click(); }
 function download(filename,mime_type,buffer,buffer_size) { var a = document.createElement('a'); a.download = UTF8ToString(filename); a.href = URL.createObjectURL(new Blob([new Uint8Array(Module["HEAPU8"].buffer, buffer, buffer_size)], {type: UTF8ToString(mime_type)})); a.click(); }
 function getDPI_js() { return window.devicePixelRatio; }
+function setLocalStorage_js(key,keylen,value,valuelen) { window.localStorage.setItem(UTF8ToString(key, keylen), UTF8ToString(value, valuelen)); }
+function getLocalStorage_js(key,keylen) { var value = window.localStorage.getItem(UTF8ToString(key, keylen)); if (value === null) { value = ""; } var lengthBytes = lengthBytesUTF8(value) + 1; var stringOnWasmHeap = _malloc(lengthBytes); stringToUTF8(value, stringOnWasmHeap, lengthBytes); return stringOnWasmHeap; }
+function sendMixpanelEvent_js(bodyUTF8,bodylen) { var bodyStr = UTF8ToString(bodyUTF8, bodylen); var result = fetch('https://api-eu.mixpanel.com/track?ip=1&verbose=1', { method: 'POST', mode: 'cors', cache: 'no-cache', headers: { 'content-type': 'application/json', 'accept': 'text/plain' }, body: bodyStr }); }
 
 
 // end include: preamble.js
@@ -9017,6 +9020,8 @@ var wasmImports = {
   /** @export */
   getDPI_js: getDPI_js,
   /** @export */
+  getLocalStorage_js: getLocalStorage_js,
+  /** @export */
   glActiveTexture: _glActiveTexture,
   /** @export */
   glAttachShader: _glAttachShader,
@@ -9269,6 +9274,10 @@ var wasmImports = {
   /** @export */
   glfwWindowHint: _glfwWindowHint,
   /** @export */
+  sendMixpanelEvent_js: sendMixpanelEvent_js,
+  /** @export */
+  setLocalStorage_js: setLocalStorage_js,
+  /** @export */
   strftime_l: _strftime_l,
   /** @export */
   upload: upload
@@ -9289,8 +9298,8 @@ var dynCall_viijii = Module['dynCall_viijii'] = (a0, a1, a2, a3, a4, a5, a6) => 
 var dynCall_iiiiij = Module['dynCall_iiiiij'] = (a0, a1, a2, a3, a4, a5, a6) => (dynCall_iiiiij = Module['dynCall_iiiiij'] = wasmExports['dynCall_iiiiij'])(a0, a1, a2, a3, a4, a5, a6);
 var dynCall_iiiiijj = Module['dynCall_iiiiijj'] = (a0, a1, a2, a3, a4, a5, a6, a7, a8) => (dynCall_iiiiijj = Module['dynCall_iiiiijj'] = wasmExports['dynCall_iiiiijj'])(a0, a1, a2, a3, a4, a5, a6, a7, a8);
 var dynCall_iiiiiijj = Module['dynCall_iiiiiijj'] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9) => (dynCall_iiiiiijj = Module['dynCall_iiiiiijj'] = wasmExports['dynCall_iiiiiijj'])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
-var ___start_em_js = Module['___start_em_js'] = 167196;
-var ___stop_em_js = Module['___stop_em_js'] = 168909;
+var ___start_em_js = Module['___start_em_js'] = 167260;
+var ___stop_em_js = Module['___stop_em_js'] = 169742;
 
 // include: postamble.js
 // === Auto-generated postamble setup entry stuff ===
