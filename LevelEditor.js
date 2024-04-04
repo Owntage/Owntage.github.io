@@ -843,7 +843,8 @@ function download(filename,mime_type,buffer,buffer_size) { var a = document.crea
 function getDPI_js() { return window.devicePixelRatio; }
 function setLocalStorage_js(key,keylen,value,valuelen) { window.localStorage.setItem(UTF8ToString(key, keylen), UTF8ToString(value, valuelen)); }
 function getLocalStorage_js(key,keylen) { var value = window.localStorage.getItem(UTF8ToString(key, keylen)); if (value === null) { value = ""; } var lengthBytes = lengthBytesUTF8(value) + 1; var stringOnWasmHeap = _malloc(lengthBytes); stringToUTF8(value, stringOnWasmHeap, lengthBytes); return stringOnWasmHeap; }
-function sendMixpanelEvent_js(bodyUTF8,bodylen) { var bodyStr = UTF8ToString(bodyUTF8, bodylen); var result = fetch('https://api-eu.mixpanel.com/track?ip=1&verbose=1', { method: 'POST', mode: 'cors', cache: 'no-cache', headers: { 'content-type': 'application/json', 'accept': 'text/plain' }, body: bodyStr }); }
+function getUUID_js() { var uuid = crypto.randomUUID(); var lengthBytes = lengthBytesUTF8(uuid) + 1; var stringOnWasmHeap = _malloc(lengthBytes); stringToUTF8(uuid, stringOnWasmHeap, lengthBytes); return stringOnWasmHeap; }
+function sendMixpanelEvent_js(bodyUTF8,bodylen) { var bodyStr = UTF8ToString(bodyUTF8, bodylen); var result = fetch('https://api-eu.mixpanel.com/track?ip=1&verbose=1', { method: 'POST', mode: 'cors', cache: 'no-cache', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain' }, body: "data=" + bodyStr }).then(resp => resp.text()).then(console.log); }
 
 
 // end include: preamble.js
@@ -9022,6 +9023,8 @@ var wasmImports = {
   /** @export */
   getLocalStorage_js: getLocalStorage_js,
   /** @export */
+  getUUID_js: getUUID_js,
+  /** @export */
   glActiveTexture: _glActiveTexture,
   /** @export */
   glAttachShader: _glAttachShader,
@@ -9299,7 +9302,7 @@ var dynCall_iiiiij = Module['dynCall_iiiiij'] = (a0, a1, a2, a3, a4, a5, a6) => 
 var dynCall_iiiiijj = Module['dynCall_iiiiijj'] = (a0, a1, a2, a3, a4, a5, a6, a7, a8) => (dynCall_iiiiijj = Module['dynCall_iiiiijj'] = wasmExports['dynCall_iiiiijj'])(a0, a1, a2, a3, a4, a5, a6, a7, a8);
 var dynCall_iiiiiijj = Module['dynCall_iiiiiijj'] = (a0, a1, a2, a3, a4, a5, a6, a7, a8, a9) => (dynCall_iiiiiijj = Module['dynCall_iiiiiijj'] = wasmExports['dynCall_iiiiiijj'])(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
 var ___start_em_js = Module['___start_em_js'] = 167260;
-var ___stop_em_js = Module['___stop_em_js'] = 169742;
+var ___stop_em_js = Module['___stop_em_js'] = 170021;
 
 // include: postamble.js
 // === Auto-generated postamble setup entry stuff ===
